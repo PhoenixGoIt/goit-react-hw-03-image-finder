@@ -16,7 +16,6 @@ export class App extends Component {
     totalHits: 0,
   };
   handleSubmit = async inputData => {
-    console.log('6')
     page = 1;
     if (inputData.trim() === '') {
       Notiflix.Notify.info('Enter Text!');
