@@ -8,7 +8,7 @@ import ImageGallery from 'components/ImageGallery/ImageGallery';
 import Button from "./LoadMoreBtn/LoadMoreBtn";
 
 let page = 1;
-class App extends Component {
+export class App extends Component {
   state = {
     inputData: '',
     items: [],
@@ -98,5 +98,3 @@ class App extends Component {
     }
   }
 }
-export default App;
-//      <LoadMoreBtn onSubmit={this.loadMore} hidden={this.state.loadMoreHidden}/>
