@@ -1,52 +1,102 @@
-import { useState } from 'react';
-import { FeedbackOptions } from './FeedbackOptions/FeedbackBtn';
-import { Statistics } from './Statistics/Statistics';
-import { Section } from './Section/Section';
-import { Notification } from './Notification/Notification';
-import React from 'react';
+import css from '../Styles/styles.module.css';
+import React, {Component} from "react";
+import Searchbar from './Searchbar/Searchbar'
+import {pixabayApi} from './Api/pixabayApi'
+import Loader from './Loader/Loader'
+import Notiflix from "notiflix";
+import ImageGallery from 'components/ImageGallery/ImageGallery';
+import Button from "./LoadMoreBtn/LoadMoreBtn";
 
-export const App = () => {
-  const [good, setGood] = useState(0);
-  const [neutral, setNeutral] = useState(0);
-  const [bad, setBad] = useState(0);
+let page = 1;
+class App extends Component {
+  state = {
+    inputData: '',
+    items: [],
+    status: 'idle',
+    totalHits: 0,
+  };
+  handleSubmit = async inputData => {
+    page = 1;
+    if (inputData.trim() === '') {
+      Notiflix.Notify.info('Enter Text!');
+      return;
+    } else {
+      try {
+        this.setState({ status: 'pending' });
+        const { totalHits, hits } = await pixabayApi(inputData, page);
+        if (hits.length < 1) {
+          this.setState({ status: 'idle' });
+          Notiflix.Notify.failure(
+            'Sorry, there are no images matching your search query. Please try again.'
+          );
+        } else {
+          this.setState({
+            items: hits,
+            inputData,
+            totalHits: totalHits,
+            status: 'resolved',
+          });
+        }
+      } catch (error) {
+        this.setState({ status: 'rejected' });
+      }
+    }
+  };
+  onNextPage = async () => {
+    this.setState({ status: 'pending' });
 
-  const total = good + neutral + bad;
-  const positivePercentage = Math.round((good / total) * 100);
+    try {
+      const { hits } = await pixabayApi(this.state.inputData, (page += 1));
+      this.setState(prevState => ({
+        items: [...prevState.items, ...hits],
+        status: 'resolved',
+      }));
+    } catch (error) {
+      this.setState({ status: 'rejected' });
+    }
+  };
 
-  function handleButtonClick(e) {
-    switch (e) {
-      case 'good':
-        setGood(good + 1);
-        break;
-      case 'neutral':
-        setNeutral(neutral + 1);
-        break;
-      case 'bad':
-        setBad(bad + 1);
-        break;
-      default:
-        break;
+  render(){
+    const { totalHits, status, items } = this.state;
+    if (status === 'idle') {
+      return (
+        <div className="App">
+          <Searchbar onSubmit={this.handleSubmit} />
+        </div>
+      );
+    }
+    if (status === 'pending') {
+      return (
+        <div className="App">
+          <Searchbar onSubmit={this.handleSubmit} />
+          <ImageGallery page={page} items={this.state.items} />
+          <Loader />
+          {totalHits > 12 && <Button onClick={this.onNextPage} />}
+        </div>
+      );
+    }
+    if (status === 'rejected') {
+      return (
+        <div className="App">
+          <Searchbar onSubmit={this.handleSubmit} />
+          <p>Something wrong, try later</p>
+        </div>
+      );
+    }
+    if (status === 'resolved') {
+      return (
+        <div className="App">
+          <Searchbar onSubmit={this.handleSubmit} />
+          <ImageGallery page={page} items={this.state.items} />
+          {totalHits > 12 && totalHits > items.length && (
+            <div className={css.a}>
+            <Button onClick={this.onNextPage} />
+            </div>
+          )}
+        </div>
+      );
     }
   }
-
-  return (
-    <div>
-      <Section title="Please leave feedback" />
-      <FeedbackOptions options={['good', 'neutral', 'bad']} onLeaveFeedback={handleButtonClick} />
-
-      <Section title="Statistics" />
-
-      {total !== 0 ? (
-        <Statistics
-          good={good}
-          neutral={neutral}
-          bad={bad}
-          total={total}
-          positivePercentage={positivePercentage}
-        />
-      ) : (
-        <Notification message="There is no feedback" />
-      )}
-    </div>
-  );
-};
+}
+export default App;
+//      <LoadMoreBtn onSubmit={this.loadMore} hidden={this.state.loadMoreHidden}/>
